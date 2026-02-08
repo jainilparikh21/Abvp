@@ -1,113 +1,83 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>ABVP Festive Frame Generator</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <style>
-        body { font-family: sans-serif; text-align: center; padding: 20px; background: #f0f0f0; }
-        h2 { color: #d35400; } /* Saffron color */
-        
-        /* Container controls the max size on screen */
-        #canvas-container { 
-            position: relative; 
-            display: inline-block; 
-            margin-top: 20px; 
-            width: 100%;
-            max-width: 500px; /* Limits size on desktop so it doesn't look huge */
-        }
-        
-        canvas { 
-            width: 100%; /* Makes it responsive */
-            height: auto; 
-            border: 2px solid #333; 
-            background-color: white;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-
-        .btn { 
-            background-color: #25D366; 
-            color: white; 
-            padding: 15px 30px; 
-            border: none; 
-            font-size: 16px; 
-            cursor: pointer; 
-            border-radius: 5px; 
-            margin-top: 20px; 
-            font-weight: bold;
-        }
-        
-        input { margin: 20px 0; }
-    </style>
-</head>
-<body>
-
-    <h2>🎉 Create Your Festive Post 🎉</h2>
-    <p>1. Select your photo.<br>2. Download.<br>3. Set as DP or Post!</p>
-
-    <input type="file" id="upload" accept="image/*"><br>
-
-    <div id="canvas-container">
-        <canvas id="canvas" width="1080" height="1080"></canvas>
-    </div>
-    
-    <br>
-    <button class="btn" onclick="downloadImage()">⬇️ Download Image</button>
-
-    <script>
+<script>
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
         const frameImg = new Image();
         
-        // Ensure this file is 1080x1080 pixels (Square)
-        frameImg.src = 'frame.png'; 
+        // --- 1. SET YOUR FRAME FILE NAME HERE ---
+        const frameFileName = 'frame.png'; 
+        
+        // --- 2. CONFIGURATION ---
+        let userImg = null;
+        
+        // Load the frame
+        frameImg.src = frameFileName; 
 
-        frameImg.onload = () => {
-            drawCanvas(null);
+        frameImg.onload = () => { 
+            console.log("Frame loaded successfully!");
+            drawCanvas(); 
         };
 
-        // If frame fails to load, show an alert (helps debugging)
-        frameImg.onerror = () => {
-            alert("Error: Could not load 'frame.png'. Make sure the file is uploaded to GitHub!");
+        // ERROR HANDLING: If the image is missing, this runs
+        frameImg.onerror = () => { 
+            alert("⚠️ ERROR: Could not find '" + frameFileName + "'. \n\nI will draw a red border instead so you can still test the upload.");
+            // Draw a fake frame so you can still test the app
+            drawCanvas();
         };
 
+        // Handle File Upload
         document.getElementById('upload').addEventListener('change', function(e) {
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                const img = new Image();
-                img.onload = function() {
-                    drawCanvas(img);
+            if(e.target.files && e.target.files[0]){
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const img = new Image();
+                    img.onload = function() {
+                        userImg = img;
+                        drawCanvas();
+                    }
+                    img.src = event.target.result;
                 }
-                img.src = event.target.result;
+                reader.readAsDataURL(e.target.files[0]);
             }
-            reader.readAsDataURL(e.target.files[0]);
         });
 
-        function drawCanvas(userImg) {
+        function drawCanvas() {
+            // Clear canvas
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            // Draw User Image (Center and "Cover" fit)
+            // 1. Draw User Image (Simple Center)
             if (userImg) {
-                // Calculate scale to cover the square entirely
+                // simple center logic for testing
                 const scale = Math.max(canvas.width / userImg.width, canvas.height / userImg.height);
                 const x = (canvas.width / 2) - (userImg.width / 2) * scale;
                 const y = (canvas.height / 2) - (userImg.height / 2) * scale;
                 ctx.drawImage(userImg, x, y, userImg.width * scale, userImg.height * scale);
             } else {
-                // Placeholder background
                 ctx.fillStyle = "#eee";
                 ctx.fillRect(0,0, canvas.width, canvas.height);
-                ctx.fillStyle = "#777";
+                ctx.fillStyle = "#333";
                 ctx.font = "40px Arial";
-                ctx.textAlign = "center";
-                ctx.fillText("Preview Area", canvas.width/2, canvas.height/2);
+                ctx.fillText("Upload a Photo", 400, 500);
             }
 
-            // Draw Frame on Top
-            ctx.drawImage(frameImg, 0, 0, canvas.width, canvas.height);
+            // 2. Draw Frame OR Red Box if missing
+            if (frameImg.complete && frameImg.naturalHeight !== 0) {
+                ctx.drawImage(frameImg, 0, 0, canvas.width, canvas.height);
+            } else {
+                // DRAW RED BORDER IF IMAGE IS MISSING
+                ctx.strokeStyle = "red";
+                ctx.lineWidth = 50;
+                ctx.strokeRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.fillStyle = "red";
+                ctx.font = "40px Arial";
+                ctx.fillText("Frame Image Missing", 350, 100);
+            }
         }
 
         function downloadImage() {
             const link = document.createElement('a');
             link.download = 'abvp-festive-post.png';
             link.href = canvas.toDataURL();
-            link
+            link.click();
+        }
+    </script>
