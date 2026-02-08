@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ABVP Frame Generator</title>
+    <style>
+        :root { --saffron: #FF9933; --green: #128807; --navy: #000080; }
+        body { font-family: 'Arial', sans-serif; background: #fdfdfd; text-align: center; margin: 0; padding: 20px; }
+        
+        h2 { color: var(--saffron); margin-bottom: 5px; }
+        p { color: #555; margin-bottom: 20px; }
+
+        /* The Box */
+        #editor-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            aspect-ratio: 1 / 1;
+            margin: 0 auto;
+            border: 2px solid #ddd;
+            background: #eee;
+            overflow: hidden;
+            touch-action: none; /* Prevents screen scroll while dragging photo */
+            cursor: move;
+        }
+
+        canvas { width: 100%; height: 100%; display: block; }
+
+        /* Controls */
+        .controls { margin: 20px auto; max-width: 500px; }
+        
+        .upload-btn {
+            background: var(--navy); color: white; padding: 12px 20px;
+            border-radius: 5px; cursor: pointer; display: inline-block;
+            font-weight: bold; margin-bottom: 15px;
+        }
+
+        .download-btn {
+            background: var(--green); color: white; border: none;
+            padding: 15px 40px; border-radius: 50px; font-size: 18px;
+            font-weight: bold; cursor: pointer; width: 100%; max-width: 300px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        #zoomRange { width: 80%; margin: 15px 0; accent-color: var(--saffron); }
+        input[type="file"] { display: none; }
+    </style>
+</head>
+<body>
+
+    <h2>🚩 ABVP Festive Frame 🚩</h2>
+    <p>Upload photo ➔ Drag to adjust ➔ Download</p>
+
+    <label class="upload-btn" for="upload">📁 Select Your Photo</label>
+    <input type="file" id="upload" accept="image/*">
+
+    <div id="editor-container">
+        <canvas id="canvas" width="1080" height="1080"></canvas>
+    </div>
+
+    <div class="controls">
+        <label>Zoom Photo:</label><br>
+        <input type="range" id="zoomRange" min="0.1" max="3" step="0.01" value="1">
+        <br>
+        <button class="download-btn" onclick="downloadImage()">⬇️ Download for Status</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const zoomRange = document.getElementById('zoomRange');
+        const frameImg = new Image();
+        
+        // --- CHANGE THIS TO YOUR ACTUAL FILENAME ---
+        frameImg.src = 'frame.png'; 
+
+        let userImg = null;
+        let imgX = 0, imgY = 0, imgScale = 1;
+        let isDragging = false, startX, startY;
+
+        frameImg.onload = () => draw();
+
+        document.getElementById('upload').addEventListener('change', function(e) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                userImg = new Image();
+                userImg.onload = () => {
+                    // Initial Scale to fill the 1:1 square
+                    imgScale = Math.max(canvas.width / userImg.width, canvas.height / userImg.height);
+                    zoomRange.value = imgScale;
+                    // Center it
+                    imgX = (canvas.width - userImg.width * imgScale) / 2;
+                    imgY = (canvas.height - userImg.height * imgScale) / 2;
+                    draw();
+                };
+                userImg.src = event.target.result;
+            };
+            reader.readAsDataURL(e.target.files[0]);
+        });
+
+        zoomRange.addEventListener('input', (e) => {
+            if (!userImg) return;
+            imgScale = parseFloat(e.target.value);
+            draw();
+        });
+
+        // Interaction Logic
+        const start = (e) => {
+            isDragging = true;
+            const pos = getPos(e);
+            startX = pos.x - imgX;
+            startY = pos.y - imgY;
+        };
+        const move = (e) => {
+            if (!isDragging || !userImg) return;
+            const pos = getPos(e);
+            imgX = pos.x - startX;
+            imgY = pos.y - startY;
+            draw();
+        };
+        const stop = () => isDragging = false;
+
+        function getPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return {
+                x: (clientX - rect.left) * (canvas.width / rect.width),
+                y: (clientY - rect.top) * (canvas.height / rect.height)
+            };
+        }
+
+        canvas.addEventListener('mousedown', start);
+        canvas.addEventListener('mousemove', move);
+        window.addEventListener('mouseup', stop);
+        canvas.addEventListener('touchstart', start, {passive:false});
+        canvas.addEventListener('touchmove', move, {passive:false});
+        canvas.addEventListener('touchend', stop);
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (userImg) {
+                ctx.drawImage(userImg, imgX, imgY, userImg.width * imgScale, userImg.height * imgScale);
+            } else {
+                ctx.fillStyle = "#fff";
+                ctx.fillRect(0,0, canvas.width, canvas.height);
+                ctx.fillStyle = "#ccc";
+                ctx.font = "40px Arial";
+                ctx.textAlign = "center";
+                ctx.fillText("Photo will appear here", 540, 540);
+            }
+            ctx.drawImage(frameImg, 0, 0, 1080, 1080);
+        }
+
+        function downloadImage() {
+            const link = document.createElement('a');
+            link.download = 'abvp_status.png';
+            link.href = canvas.toDataURL('image/png', 1.0);
+            link.click();
+        }
+    </script>
+</body>
+</html>
